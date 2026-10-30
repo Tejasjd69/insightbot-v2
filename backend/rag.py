@@ -5,21 +5,26 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 _emb = None
+
 def embeddings():
     global _emb
+
     if _emb is None:
-        _emb = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+        print("Loading embedding model...")
+
+        _emb = HuggingFaceEmbeddings(
+            model_name="all-MiniLM-L6-v2",
+            model_kwargs={"device": "cpu"},
+            encode_kwargs={
+                "batch_size": 32,
+                "normalize_embeddings": True
+            }
+        )
+
+        print("Embedding model loaded successfully!")
+
     return _emb
-
-class Index:
-    """Chroma index with configurable chunking (cosine relevance scores in 0-1)."""
-    def __init__(self, chunk_size=800, overlap=100):
-        self.splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=overlap)
-        self.store = Chroma(collection_name=f"c{uuid.uuid4().hex[:8]}",
-                            embedding_function=embeddings(),
-                            collection_metadata={"hnsw:space": "cosine"})
-        self.n = 0
-
+    
     def ingest(self, path, name):
         docs = PyPDFLoader(path).load()
         for d in docs:
