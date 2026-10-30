@@ -26,14 +26,37 @@ def embeddings():
     return _emb
     
     def ingest(self, path, name):
-        docs = PyPDFLoader(path).load()
-        for d in docs:
-            d.metadata["source"] = name
-        chunks = self.splitter.split_documents(docs)
-        if chunks:
-            self.store.add_documents(chunks)
-            self.n += len(chunks)
-        return len(chunks)
+    print(f"Processing PDF: {name}")
+
+    docs = PyPDFLoader(path).load()
+
+    print(f"Extracted {len(docs)} pages")
+
+    for d in docs:
+        d.metadata["source"] = name
+
+    chunks = self.splitter.split_documents(docs)
+
+    print(f"Generated {len(chunks)} chunks")
+
+    batch_size = 64
+
+    for i in range(0, len(chunks), batch_size):
+        batch = chunks[i:i + batch_size]
+
+        self.store.add_documents(batch)
+
+        print(
+            f"Indexed {min(i + batch_size, len(chunks))}"
+            f"/{len(chunks)} chunks"
+        )
+
+    self.n += len(chunks)
+
+    print("PDF indexing completed!")
+
+    return len(chunks)
+  
 
     def search(self, q, k=4):
         if self.n == 0:
